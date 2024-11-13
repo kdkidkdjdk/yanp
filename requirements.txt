@@ -1,10 +1,6 @@
 asyncio
-random
-ssl
-uuid
-re
 websockets
 fake-useragent
 loguru
-socks
+PySocks
 faker
