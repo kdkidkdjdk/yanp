@@ -126,13 +126,41 @@ class AsyncGrassWs:
             await asyncio.sleep(5)
             await self.connect_to_wss()  # 递归调用重试连接
 
-async def main():
-    # 示例用户和代理
-    user_id = "5242367b-d366-1234-987a-9ebd303fa8f5"
-    proxy_url = "socks5://proxy.com:1080"  # 代理地址
+async def load_proxies_from_file(file_path):
+    """
+    读取代理文件，并返回每个用户的 ID 和代理地址
+    格式：
+    user_id==proxy_url
+    """
+    with open(file_path, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+    
+    user_proxy_pairs = []
+    for line in lines:
+        line = line.strip()
+        if line:
+            if "==" in line:
+                user_id, proxy_url = line.split('==')
+                user_proxy_pairs.append((user_id, proxy_url))
+            else:
+                user_id = line
+                user_proxy_pairs.append((user_id, None))  # 如果没有代理，代理地址为 None
+    return user_proxy_pairs
 
-    ws = AsyncGrassWs(user_id, proxy_url)
-    await ws.connect_to_wss()
+async def main():
+    proxies_file = '/mnt/data/proxies.txt'  # 您的代理文件路径
+
+    # 加载所有用户的ID和代理
+    user_proxy_pairs = await load_proxies_from_file(proxies_file)
+
+    # 为每个用户创建连接并运行
+    tasks = []
+    for user_id, proxy_url in user_proxy_pairs:
+        ws = AsyncGrassWs(user_id, proxy_url)
+        tasks.append(ws.connect_to_wss())
+
+    # 并发运行所有用户的连接
+    await asyncio.gather(*tasks)
 
 # 运行
 if __name__ == "__main__":
